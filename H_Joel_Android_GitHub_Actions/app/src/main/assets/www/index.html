@@ -253,6 +253,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 
       <label>Nama Driver</label>
       <input id="driverName" placeholder="Nama Driver" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()">
 
+      <label>Nomor HP</label>
+      <input id="driverPhone" type="tel" inputmode="tel" placeholder="Contoh: 081234567890">
+
       <label>Plat No</label>
       <input id="plateNo" placeholder="Contoh: F 1234 ABC" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()">
 
@@ -386,11 +389,16 @@ function showWizardStep(step){
   // Validasi hanya ketika maju.
   if(step===2 && wizardStep===1){
     const driver=document.getElementById('driverName');
+    const phone=document.getElementById('driverPhone');
     const plate=document.getElementById('plateNo');
     const vendor=document.getElementById('vendor');
 
     if(!driver || !driver.value.trim()){
       status('saveStatus','Nama Driver wajib diisi.','bad');
+      return;
+    }
+    if(!phone || !phone.value.trim()){
+      status('saveStatus','Nomor HP wajib diisi.','bad');
       return;
     }
     if(!plate || !plate.value.trim()){
@@ -529,9 +537,11 @@ function resetForm(){
   scanLock=false;
 
   const driver=$('driverName');
+  const phone=$('driverPhone');
   const plate=$('plateNo');
   const reason=$('reason');
   if(driver)driver.value='';
+  if(phone)phone.value='';
   if(plate)plate.value='';
   if(reason)reason.value='';
 
@@ -1002,7 +1012,7 @@ function closeDriverCamera(){
 }
 
 
-function validate(){if(!awbs.length)return 'AWB belum di-scan';if(moduleName==='return'&&awbs.length!==1)return 'Return harus 1 AWB';if(!$('driverName').value.trim())return 'Nama Driver wajib diisi';if(!$('plateNo').value.trim())return 'Plat No wajib diisi';if(!$('vendor').value)return 'Vendor wajib dipilih';if(moduleName!=='return'&&!driverPhoto)return 'Foto Driver wajib diambil';if(moduleName==='return'&&!$('keterangan').value)return 'Keterangan wajib dipilih';if(moduleName==='return'&&!$('reason').value.trim())return 'Reason wajib diisi';if((moduleName==='outbound'||moduleName==='return')&&!snItems.length)return 'Foto SN wajib diambil';
+function validate(){if(!awbs.length)return 'AWB belum di-scan';if(moduleName==='return'&&awbs.length!==1)return 'Return harus 1 AWB';if(!$('driverName').value.trim())return 'Nama Driver wajib diisi';if(!$('driverPhone').value.trim())return 'Nomor HP wajib diisi';if(!$('plateNo').value.trim())return 'Plat No wajib diisi';if(!$('vendor').value)return 'Vendor wajib dipilih';if(moduleName!=='return'&&!driverPhoto)return 'Foto Driver wajib diambil';if(moduleName==='return'&&!$('keterangan').value)return 'Keterangan wajib dipilih';if(moduleName==='return'&&!$('reason').value.trim())return 'Reason wajib diisi';if((moduleName==='outbound'||moduleName==='return')&&!snItems.length)return 'Foto SN wajib diambil';
 if(snItems.length>awbs.length)return 'Jumlah Foto SN tidak boleh melebihi jumlah AWB';
 return ''}
 
@@ -1014,6 +1024,7 @@ function logDoubleScan(awb){
     username:session?session.username:'',
     origin:session?session.origin:'',
     driverName:$('driverName')?$('driverName').value.trim().toUpperCase():'',
+    driverPhone:$('driverPhone')?$('driverPhone').value.trim():'',
     plateNo:$('plateNo')?$('plateNo').value.trim().toUpperCase():'',
     vendor:$('vendor')?$('vendor').value:''
   };
@@ -1037,7 +1048,7 @@ function logDoubleScan(awb){
   if(navigator.vibrate)navigator.vibrate([120,80,120]);
 }
 
-async function saveData(){await stopScanner();closeDriverCamera();closeSnCamera();const v=validate();if(v)return status('saveStatus',v,'bad');const requestId=(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));const payload={requestId,module:moduleName,username:session.username,origin:session.origin,awbs,driverName:$('driverName').value.trim().toUpperCase(),plateNo:$('plateNo').value.trim().toUpperCase(),vendor:$('vendor').value,keterangan:$('keterangan').value,reason:$('reason').value.trim(),driverPhoto,sns:snItems.map(()=>''),snPhotos:snItems.map(x=>x.photo)};$('saveBtn').disabled=true;status('saveStatus','Mengupload foto dan menyimpan data...','wait');try{if(API_URL.includes('PASTE_'))throw new Error('Isi API_URL pada index.html dengan URL Apps Script /exec'); const fd=new URLSearchParams();fd.set('payload',JSON.stringify(payload)); await fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:fd.toString()}); const ok=await waitStatus(requestId);if(!ok.ok)throw new Error(ok.message||'Gagal menyimpan');status('saveStatus',ok.message||'Data tersimpan','ok');setTimeout(()=>goHome(),1200)}catch(e){status('saveStatus',e.message,'bad')}finally{$('saveBtn').disabled=false}}
+async function saveData(){await stopScanner();closeDriverCamera();closeSnCamera();const v=validate();if(v)return status('saveStatus',v,'bad');const requestId=(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));const payload={requestId,module:moduleName,username:session.username,origin:session.origin,awbs,driverName:$('driverName').value.trim().toUpperCase(),driverPhone:$('driverPhone').value.trim(),plateNo:$('plateNo').value.trim().toUpperCase(),vendor:$('vendor').value,keterangan:$('keterangan').value,reason:$('reason').value.trim(),driverPhoto,sns:snItems.map(()=>''),snPhotos:snItems.map(x=>x.photo)};$('saveBtn').disabled=true;status('saveStatus','Mengupload foto dan menyimpan data...','wait');try{if(API_URL.includes('PASTE_'))throw new Error('Isi API_URL pada index.html dengan URL Apps Script /exec'); const fd=new URLSearchParams();fd.set('payload',JSON.stringify(payload)); await fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:fd.toString()}); const ok=await waitStatus(requestId);if(!ok.ok)throw new Error(ok.message||'Gagal menyimpan');status('saveStatus',ok.message||'Data tersimpan','ok');setTimeout(()=>goHome(),1200)}catch(e){status('saveStatus',e.message,'bad')}finally{$('saveBtn').disabled=false}}
 async function waitStatus(id){
   for(let i=0;i<30;i++){
     await new Promise(r=>setTimeout(r,1000));
