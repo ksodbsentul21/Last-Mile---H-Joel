@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Last Mile - H Joel Logistics</title>
-<meta name="app-version" content="wizard-double-outbound-v4">
+<meta name="app-version" content="wizard-serial-outbound-v5">
 <script src="https://unpkg.com/html5-qrcode"></script>
 <style>
 
@@ -56,9 +56,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 
 .grid{display:grid;gap:12px;margin-top:15px}
 .module{width:100%;border:0;border-radius:7px;min-height:59px;color:#fff;font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center;gap:12px}
 .module span{font-size:24px}
-.module:nth-child(1){background:var(--orange)}
-.module:nth-child(2){background:var(--dark)}
-.module:nth-child(3){background:var(--green)}
+.module:nth-child(1){background:#1565c0}
+.module:nth-child(2){background:var(--orange)}
+.module:nth-child(3){background:var(--dark)}
+.module:nth-child(4){background:var(--green)}
 .moduleTitle{text-align:center;color:var(--orange);font-size:17px;font-weight:900;margin-bottom:12px}
 .formHeader{margin:0 0 5px;padding:14px 18px;border-bottom:1px solid #eee;display:grid;grid-template-columns:48px 1fr 48px;align-items:center}
 .formHeader h1{font-size:18px;color:var(--orange);margin:0;text-align:center}
@@ -218,6 +219,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 
     <div class="card">
       <div class="moduleTitle">PILIH MODUL</div>
       <div class="grid">
+        <button type="button" class="module" onclick="openModule('serial')"><span>▣</span>SERIAL NUMBER</button>
         <button type="button" class="module" onclick="openModule('outbound')"><span>⇧</span>OUTBOUND</button>
         <button type="button" class="module" onclick="openModule('bast')"><span>↩</span>BAST BACK</button>
         <button type="button" class="module" onclick="openModule('return')"><span>↩</span>RETURN</button>
@@ -268,7 +270,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 
         <textarea id="reason" placeholder="Tuliskan Reason"></textarea>
       </div>
         <div class="wizardNav single">
-          <button class="btn primary" type="button" onclick="showWizardStep(2)">SELANJUTNYA →</button>
+          <button class="btn primary" type="button" onclick="nextFromManual()">SELANJUTNYA →</button>
         </div>
       </div>
 
@@ -301,7 +303,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 
       </div>
 
       <div id="stepPhoto" class="wizardStep" style="display:none">
-        <div class="wizardTitle">3 · FOTO DRIVER & FOTO SN</div>
+        <div class="wizardTitle" id="photoStepTitle">3 · FOTO DRIVER & FOTO SN</div>
 
 
 
@@ -344,7 +346,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 
 
       <button class="btn primary" style="margin-top:18px" id="saveBtn" onclick="saveData()">▣ SIMPAN DATA</button>
       <div id="saveStatus" class="status"></div>
-        <button class="btn dark" style="margin-top:10px" type="button" onclick="showWizardStep(2)">← KEMBALI KE AWB</button>
+        <button class="btn dark" style="margin-top:10px" type="button" onclick="moduleName==='serial'?showWizardStep(1):showWizardStep(2)"><span id="photoBackLabel">← KEMBALI KE AWB</span></button>
       </div>
     </div>
   </section>
@@ -387,7 +389,7 @@ function showWizardStep(step){
   }
 
   // Validasi hanya ketika maju.
-  if(step===2 && wizardStep===1){
+  if(step>1 && wizardStep===1){
     const driver=document.getElementById('driverName');
     const phone=document.getElementById('driverPhone');
     const plate=document.getElementById('plateNo');
@@ -411,7 +413,7 @@ function showWizardStep(step){
     }
   }
 
-  if(step===3 && wizardStep===2 && awbs.length===0){
+  if(step===3 && wizardStep===2 && moduleName!=='serial' && awbs.length===0){
     status('saveStatus','Scan / Input minimal 1 AWB terlebih dahulu.','bad');
     return;
   }
@@ -432,6 +434,10 @@ function showWizardStep(step){
 
   hideStatus('saveStatus');
   window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function nextFromManual(){
+  showWizardStep(moduleName==='serial'?3:2);
 }
 
 const $=id=>document.getElementById(id);
@@ -510,17 +516,25 @@ function openModule(m){
   $('formView').classList.remove('hidden');
 
   $('formTitle').textContent=
+    m==='serial'?'SERIAL NUMBER':
     m==='outbound'?'OUTBOUND':
     m==='bast'?'BAST BACK':'RETURN';
 
   $('formHint').textContent=
-    m==='outbound'?'Lengkapi data, scan AWB, lalu foto.':
+    m==='serial'?'Lengkapi data lalu ambil Foto SN.':
+    m==='outbound'?'Lengkapi data, scan AWB, lalu foto Driver.':
     m==='bast'?'Lengkapi data, scan AWB, lalu foto.':
     'Lengkapi data Return, scan 1 AWB, lalu foto.';
 
-  $('snSection').classList.toggle('hidden',m==='bast');
+  $('snSection').classList.toggle('hidden',!(m==='serial'||m==='return'));
   $('returnExtra').classList.toggle('hidden',m!=='return');
-  $('driverPhotoSection').classList.toggle('hidden',m==='return');
+  $('driverPhotoSection').classList.toggle('hidden',m==='return'||m==='serial');
+  $('photoStepTitle').textContent=
+    m==='serial'?'2 · FOTO SN':
+    m==='outbound'?'3 · FOTO DRIVER':
+    m==='bast'?'3 · FOTO DRIVER':
+    '3 · FOTO SN';
+  $('photoBackLabel').textContent=m==='serial'?'← KEMBALI':'← KEMBALI KE AWB';
 
   resetForm();
   wizardStep=1;
@@ -659,8 +673,11 @@ function toggleAWBList(){
   $('awbList').classList.toggle('hidden',awbListCollapsed);
   $('awbToggleBtn').textContent=awbListCollapsed?'LIHAT⌄':'MINIMIZE⌃';
 }
+function getSnMax(){
+  return moduleName==='serial'?1:awbs.length;
+}
 function enforceSnLimit(){
-  const maxSn=awbs.length;
+  const maxSn=getSnMax();
   if(snItems.length>maxSn){
     snItems=snItems.slice(0,maxSn);
   }
@@ -775,7 +792,7 @@ function beepDuplicate(){
 async function openSnCamera(){
   hideStatus('saveStatus');
 
-  if(awbs.length===0){
+  if(moduleName!=='serial' && awbs.length===0){
     return status(
       'saveStatus',
       'Scan / Input AWB terlebih dahulu sebelum mengambil Foto SN.',
@@ -783,10 +800,10 @@ async function openSnCamera(){
     );
   }
 
-  if(snItems.length>=awbs.length){
+  if(snItems.length>=getSnMax()){
     return status(
       'saveStatus',
-      'Jumlah Foto SN sudah sesuai jumlah AWB ('+awbs.length+').',
+      'Jumlah Foto SN sudah lengkap ('+getSnMax()+').',
       'bad'
     );
   }
@@ -811,7 +828,7 @@ async function openSnCamera(){
     $('btnOpenSnCamera').classList.add('hidden');
 
     $('ocrProgress').textContent=
-      'Kamera SN aktif. Foto '+(snItems.length+1)+' dari maksimal '+awbs.length+'.';
+      'Kamera SN aktif. Foto '+(snItems.length+1)+' dari maksimal '+getSnMax()+'.';
 
   }catch(e){
     console.error(e);
@@ -825,7 +842,7 @@ async function openSnCamera(){
 
 
 async function captureSnPhoto(){
-  if(awbs.length===0){
+  if(moduleName!=='serial' && awbs.length===0){
     return status(
       'saveStatus',
       'Scan / Input AWB terlebih dahulu.',
@@ -833,11 +850,11 @@ async function captureSnPhoto(){
     );
   }
 
-  if(snItems.length>=awbs.length){
+  if(snItems.length>=getSnMax()){
     closeSnCamera();
     return status(
       'saveStatus',
-      'Foto SN sudah mencapai batas sesuai jumlah AWB ('+awbs.length+').',
+      'Foto SN sudah mencapai batas ('+getSnMax()+').',
       'bad'
     );
   }
@@ -885,7 +902,7 @@ async function captureSnPhoto(){
   }
 
   const taken=snItems.length;
-  const max=awbs.length;
+  const max=getSnMax();
 
   $('ocrProgress').textContent=
     'Foto SN '+taken+'/'+max+' siap disimpan.';
@@ -1012,8 +1029,8 @@ function closeDriverCamera(){
 }
 
 
-function validate(){if(!awbs.length)return 'AWB belum di-scan';if(moduleName==='return'&&awbs.length!==1)return 'Return harus 1 AWB';if(!$('driverName').value.trim())return 'Nama Driver wajib diisi';if(!$('driverPhone').value.trim())return 'Nomor HP wajib diisi';if(!$('plateNo').value.trim())return 'Plat No wajib diisi';if(!$('vendor').value)return 'Vendor wajib dipilih';if(moduleName!=='return'&&!driverPhoto)return 'Foto Driver wajib diambil';if(moduleName==='return'&&!$('keterangan').value)return 'Keterangan wajib dipilih';if(moduleName==='return'&&!$('reason').value.trim())return 'Reason wajib diisi';if((moduleName==='outbound'||moduleName==='return')&&!snItems.length)return 'Foto SN wajib diambil';
-if(snItems.length>awbs.length)return 'Jumlah Foto SN tidak boleh melebihi jumlah AWB';
+function validate(){if(moduleName!=='serial'&&!awbs.length)return 'AWB belum di-scan';if(moduleName==='return'&&awbs.length!==1)return 'Return harus 1 AWB';if(!$('driverName').value.trim())return 'Nama Driver wajib diisi';if(!$('driverPhone').value.trim())return 'Nomor HP wajib diisi';if(!$('plateNo').value.trim())return 'Plat No wajib diisi';if(!$('vendor').value)return 'Vendor wajib dipilih';if((moduleName==='outbound'||moduleName==='bast')&&!driverPhoto)return 'Foto Driver wajib diambil';if(moduleName==='return'&&!$('keterangan').value)return 'Keterangan wajib dipilih';if(moduleName==='return'&&!$('reason').value.trim())return 'Reason wajib diisi';if((moduleName==='serial'||moduleName==='return')&&!snItems.length)return 'Foto SN wajib diambil';
+if(snItems.length>getSnMax())return 'Jumlah Foto SN melebihi batas';
 return ''}
 
 function logDoubleScan(awb){
