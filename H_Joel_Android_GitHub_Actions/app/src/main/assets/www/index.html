@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Last Mile - H Joel Logistics</title>
-<meta name="app-version" content="wizard-serial-outbound-v5">
+<meta name="app-version" content="wizard-serial-unlimited-v6">
 <script src="https://unpkg.com/html5-qrcode"></script>
 <style>
 
@@ -674,14 +674,20 @@ function toggleAWBList(){
   $('awbToggleBtn').textContent=awbListCollapsed?'LIHAT⌄':'MINIMIZE⌃';
 }
 function getSnMax(){
-  return moduleName==='serial'?1:awbs.length;
+  return awbs.length;
 }
 function enforceSnLimit(){
+  const info=$('snLimitInfo');
+
+  if(moduleName==='serial'){
+    if(info) info.textContent='Foto SN bebas — ambil sebanyak yang diperlukan';
+    return;
+  }
+
   const maxSn=getSnMax();
   if(snItems.length>maxSn){
     snItems=snItems.slice(0,maxSn);
   }
-  const info=$('snLimitInfo');
   if(info) info.textContent='Maksimal Foto SN = Jumlah AWB ('+maxSn+')';
 }
 
@@ -800,7 +806,7 @@ async function openSnCamera(){
     );
   }
 
-  if(snItems.length>=getSnMax()){
+  if(moduleName!=='serial' && snItems.length>=getSnMax()){
     return status(
       'saveStatus',
       'Jumlah Foto SN sudah lengkap ('+getSnMax()+').',
@@ -827,8 +833,9 @@ async function openSnCamera(){
     $('snCameraBox').style.display='block';
     $('btnOpenSnCamera').classList.add('hidden');
 
-    $('ocrProgress').textContent=
-      'Kamera SN aktif. Foto '+(snItems.length+1)+' dari maksimal '+getSnMax()+'.';
+    $('ocrProgress').textContent = moduleName==='serial'
+      ? 'Kamera SN aktif. Siap ambil Foto SN ke-'+(snItems.length+1)+'.'
+      : 'Kamera SN aktif. Foto '+(snItems.length+1)+' dari maksimal '+getSnMax()+'.';
 
   }catch(e){
     console.error(e);
@@ -850,7 +857,7 @@ async function captureSnPhoto(){
     );
   }
 
-  if(snItems.length>=getSnMax()){
+  if(moduleName!=='serial' && snItems.length>=getSnMax()){
     closeSnCamera();
     return status(
       'saveStatus',
@@ -902,8 +909,19 @@ async function captureSnPhoto(){
   }
 
   const taken=snItems.length;
-  const max=getSnMax();
 
+  if(moduleName==='serial'){
+    $('ocrProgress').textContent=
+      'Foto SN ke-'+taken+' siap disimpan. Silakan ambil foto berikutnya jika masih ada.';
+    status(
+      'saveStatus',
+      taken+' Foto SN sudah diambil. Bisa tambah lagi atau langsung Simpan.',
+      'ok'
+    );
+    return;
+  }
+
+  const max=getSnMax();
   $('ocrProgress').textContent=
     'Foto SN '+taken+'/'+max+' siap disimpan.';
 
@@ -1030,7 +1048,7 @@ function closeDriverCamera(){
 
 
 function validate(){if(moduleName!=='serial'&&!awbs.length)return 'AWB belum di-scan';if(moduleName==='return'&&awbs.length!==1)return 'Return harus 1 AWB';if(!$('driverName').value.trim())return 'Nama Driver wajib diisi';if(!$('driverPhone').value.trim())return 'Nomor HP wajib diisi';if(!$('plateNo').value.trim())return 'Plat No wajib diisi';if(!$('vendor').value)return 'Vendor wajib dipilih';if((moduleName==='outbound'||moduleName==='bast')&&!driverPhoto)return 'Foto Driver wajib diambil';if(moduleName==='return'&&!$('keterangan').value)return 'Keterangan wajib dipilih';if(moduleName==='return'&&!$('reason').value.trim())return 'Reason wajib diisi';if((moduleName==='serial'||moduleName==='return')&&!snItems.length)return 'Foto SN wajib diambil';
-if(snItems.length>getSnMax())return 'Jumlah Foto SN melebihi batas';
+if(moduleName!=='serial'&&snItems.length>getSnMax())return 'Jumlah Foto SN melebihi batas';
 return ''}
 
 function logDoubleScan(awb){
