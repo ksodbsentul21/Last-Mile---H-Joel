@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Last Mile - H Joel Logistics</title>
-<meta name="app-version" content="wizard-serial-unlimited-v6">
+<meta name="app-version" content="wizard-serial-unlimited-v6-back-android">
 <script src="https://unpkg.com/html5-qrcode"></script>
 <style>
 
@@ -236,7 +236,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 
 
   <section id="formView" class="hidden">
     <div class="formHeader">
-      <button class="backArrow" onclick="goHome()">←</button>
+      <button class="backArrow" onclick="handleAppBack()">←</button>
       <h1 id="formTitle">OUTBOUND</h1>
       <div></div>
     </div>
@@ -378,6 +378,40 @@ let scanner=null, scanLock=false, driverPhotoStream=null, snPhotoStream=null;
 
 let wizardStep=1;
 
+// Android / PWA navigation: keep an in-page history entry so Back reaches
+// popstate rather than leaving the application. Never reset entered form data.
+let backGuardReady=false;
+function armAndroidBack(){
+  try{
+    history.pushState({hJoelBackGuard:true,at:Date.now()},'',location.href);
+    backGuardReady=true;
+  }catch(e){console.warn('Back history unavailable',e)}
+}
+function isVisible(id){
+  const el=document.getElementById(id);
+  return !!el && !el.classList.contains('hidden');
+}
+async function handleAppBack(){
+  if(isVisible('awbModalOverlay')){closeAwbModal();return;}
+  if(snPhotoStream){closeSnCamera();return;}
+  if(driverPhotoStream){closeDriverCamera();return;}
+  if(scanner){await stopScanner();return;}
+  if(isVisible('formView')){
+    if(wizardStep===3){showWizardStep(moduleName==='serial'?1:2);return;}
+    if(wizardStep===2){showWizardStep(1);return;}
+    await goHome();return;
+  }
+  // At the dashboard/login, keep the application open.
+}
+window.addEventListener('popstate',function(){
+  // Restore the guard immediately; the next hardware Back remains in-app.
+  armAndroidBack();
+  Promise.resolve(handleAppBack()).catch(e=>console.error('Back navigation:',e));
+});
+// First entry must exist before the user navigates into a module.
+armAndroidBack();
+
+
 function showWizardStep(step){
   const manual=document.getElementById('stepManual');
   const awbStep=document.getElementById('stepAwb');
@@ -500,6 +534,7 @@ async function login(){
     );
 
     showHome();
+    armAndroidBack();
 
   }catch(e){
     status('loginStatus',e.message,'bad');
@@ -509,6 +544,7 @@ function showHome(){$('loginView').classList.add('hidden');$('formView').classLi
 function logout(){localStorage.removeItem('hjoelSession');session=null;$('homeView').classList.add('hidden');$('formView').classList.add('hidden');$('loginView').classList.remove('hidden');$('usernameInput').value=''}
 async function goHome(){await stopScanner();closeDriverCamera();closeSnCamera();resetForm();showHome()}
 function openModule(m){
+  armAndroidBack();
   moduleName=m;
 
   // Tampilkan form lebih dulu, baru reset dan tentukan tahap.
